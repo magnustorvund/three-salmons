@@ -1,0 +1,10 @@
+[package]
+name = "three-salmons"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A UCI-compatible chess engine written in Rust"
+
+[dependencies]
+thiserror = "1.0"
+anyhow = "1.0"
