@@ -103,10 +103,20 @@ impl Board {
                 Piece::Queen => 4,
                 Piece::King => 5,
             };
-            if is_white {
-                self.black_pieces[piece_index] &= !to_mask;
+            let captured_square = if mv.is_en_passant {
+                if is_white {
+                    mv.to - 8
+                } else {
+                    mv.to + 8
+                }
             } else {
-                self.white_pieces[piece_index] &= !to_mask;
+                mv.to
+            };
+            let captured_mask = 1u64 << captured_square;
+            if is_white {
+                self.black_pieces[piece_index] &= !captured_mask;
+            } else {
+                self.white_pieces[piece_index] &= !captured_mask;
             }
         }
 
@@ -139,21 +149,6 @@ impl Board {
                 self.white_pieces[piece_index] |= to_mask;
             } else {
                 self.black_pieces[piece_index] |= to_mask;
-            }
-        }
-
-        // Handle en passant capture
-        if mv.is_en_passant {
-            let captured_pawn_square = if is_white {
-                mv.to - 8
-            } else {
-                mv.to + 8
-            };
-            let captured_pawn_mask = 1u64 << captured_pawn_square;
-            if is_white {
-                self.black_pieces[0] &= !captured_pawn_mask;  // Remove captured pawn
-            } else {
-                self.white_pieces[0] &= !captured_pawn_mask;  // Remove captured pawn
             }
         }
 
@@ -201,21 +196,11 @@ impl Board {
         }
 
         // Update en passant square
-        if mv.piece == Piece::Pawn {
-            let rank_diff = (mv.to as i8 - mv.from as i8).abs();
-            if rank_diff == 16 {
-                // Double pawn push
-                self.en_passant_square = if is_white {
-                    Some(mv.from + 8)  // Square behind the pawn
-                } else {
-                    Some(mv.from - 8)  // Square behind the pawn
-                };
-            } else {
-                self.en_passant_square = None;
-            }
+        self.en_passant_square = if mv.piece == Piece::Pawn && (mv.to as i8 - mv.from as i8).abs() == 16 {
+            Some(if is_white { mv.from + 8 } else { mv.from - 8 })
         } else {
-            self.en_passant_square = None;
-        }
+            None
+        };
 
         // Update move counters
         if mv.piece == Piece::Pawn || mv.captured_piece.is_some() {

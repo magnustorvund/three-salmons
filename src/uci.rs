@@ -10,8 +10,6 @@ use std::time::Duration;
 pub struct UciHandler {
     board: Board,
     move_generator: MoveGenerator,
-    evaluator: Evaluator,
-    search_time: u64, // in milliseconds
     search: Search,
 }
 
@@ -20,8 +18,6 @@ impl UciHandler {
         UciHandler {
             board: Board::new(),
             move_generator: MoveGenerator::new(),
-            evaluator: Evaluator::new(),
-            search_time: 1000, // Default 1 second per move
             search: Search::new(),
         }
     }
@@ -177,18 +173,19 @@ impl UciHandler {
     fn handle_go(&mut self, parts: &[&str]) -> String {
         // Parse search parameters
         let mut max_time = Duration::from_secs(5); // Default 5 seconds
-        let mut max_depth = 4; // Default depth
+        let mut increment = 0; // Default increment
 
         for i in 0..parts.len() {
             match parts[i] {
-                "wtime" => {
+                "wtime" | "btime" => {
                     if let Some(time) = parts.get(i + 1).and_then(|s| s.parse::<u64>().ok()) {
-                        max_time = Duration::from_millis(time / 20); // Use 1/20th of the remaining time
+                        // Use 1/10th of the remaining time, but ensure we have at least 1 second
+                        max_time = Duration::from_millis(std::cmp::max(time / 10, 1000));
                     }
                 }
-                "btime" => {
-                    if let Some(time) = parts.get(i + 1).and_then(|s| s.parse::<u64>().ok()) {
-                        max_time = Duration::from_millis(time / 20);
+                "winc" | "binc" => {
+                    if let Some(inc) = parts.get(i + 1).and_then(|s| s.parse::<u64>().ok()) {
+                        increment = inc;
                     }
                 }
                 "movetime" => {
@@ -198,16 +195,20 @@ impl UciHandler {
                 }
                 "depth" => {
                     if let Some(depth) = parts.get(i + 1).and_then(|s| s.parse::<u32>().ok()) {
-                        max_depth = depth;
+                        self.search.set_max_depth(depth);
                     }
                 }
                 _ => {}
             }
         }
 
+        // Add increment to the time if available
+        if increment > 0 {
+            max_time += Duration::from_millis(increment);
+        }
+
         // Configure search parameters
-        self.search.set_max_depth(max_depth);
-        self.search.set_max_time(max_time.as_secs());
+        self.search.set_max_time(max_time.as_millis() as u64);
 
         // Use the search engine to find the best move
         if let Some(best_move) = self.search.find_best_move(&self.board) {
@@ -217,7 +218,7 @@ impl UciHandler {
         }
     }
 
-    fn format_move(&self, mv: &Move) -> String {
+    fn  format_move(&self, mv: &Move) -> String {
         let from_file = (mv.from % 8) as u8;
         let from_rank = (mv.from / 8) as u8;
         let to_file = (mv.to % 8) as u8;

@@ -3,6 +3,8 @@ use crate::evaluation::Evaluator;
 use crate::movegen::{Move, MoveGenerator};
 use crate::transposition::{NodeType, TranspositionEntry, TranspositionTable};
 use std::time::{Duration, Instant};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 pub struct Search {
     evaluator: Evaluator,
@@ -12,6 +14,10 @@ pub struct Search {
     max_time: Duration,
     nodes_searched: u64,
     start_time: Instant,
+    // Killer moves: store the best non-capture moves at each depth
+    killer_moves: [[Option<Move>; 2]; 64], // [depth][slot]
+    // History heuristic: store how often a move has caused a beta cutoff
+    history_table: [[i32; 64]; 64], // [from_square][to_square]
 }
 
 impl Search {
@@ -20,10 +26,12 @@ impl Search {
             evaluator: Evaluator::new(),
             move_generator: MoveGenerator::new(),
             transposition_table: TranspositionTable::new(1_000_000), // 1 million entries
-            max_depth: 4,
-            max_time: Duration::from_secs(5),
+            max_depth: 8,
+            max_time: Duration::from_secs(10),
             nodes_searched: 0,
             start_time: Instant::now(),
+            killer_moves: [[None; 2]; 64],
+            history_table: [[0; 64]; 64],
         }
     }
 
@@ -32,12 +40,15 @@ impl Search {
         self.start_time = Instant::now();
 
         let mut best_move = None;
-        let mut best_score = i32::MIN;
-        let mut alpha = i32::MIN;
+        let mut best_score = -i32::MAX;
+        let mut alpha = -i32::MAX;
         let beta = i32::MAX;
 
         // Get all legal moves and order them
         let mut moves = self.move_generator.generate_moves(board);
+        if moves.is_empty() {
+            return None;
+        }
         self.order_moves(&mut moves, board, None);
 
         // Try each move and evaluate the position
@@ -87,7 +98,7 @@ impl Search {
         self.order_moves(&mut moves, board, self.transposition_table.get_best_move(hash));
 
         let mut alpha = alpha;
-        let mut best_score = i32::MIN;
+        let mut best_score = -i32::MAX;
         let mut best_move = None;
 
         for mv in moves {
@@ -106,6 +117,19 @@ impl Search {
 
             // Alpha-beta pruning
             if alpha >= beta {
+                // Update killer moves
+                if mv.captured_piece.is_none() && mv.promotion.is_none() {
+                    let depth_idx = depth as usize;
+                    if depth_idx < 64 {
+                        // Shift existing killer moves
+                        self.killer_moves[depth_idx][1] = self.killer_moves[depth_idx][0];
+                        self.killer_moves[depth_idx][0] = Some(mv);
+                    }
+                }
+
+                // Update history heuristic
+                let depth_squared = (depth * depth) as i32;
+                self.history_table[mv.from as usize][mv.to as usize] += depth_squared;
                 break;
             }
 
@@ -176,7 +200,13 @@ impl Search {
         alpha
     }
 
-    fn order_moves(&self, moves: &mut Vec<Move>, board: &Board, hash_move: Option<u64>) {
+    fn order_moves(&mut self, moves: &mut Vec<Move>, board: &Board, hash_move: Option<u64>) {
+        // Add some randomness to move ordering in the opening
+        let is_opening = board.white_pieces[0].count_ones() + board.black_pieces[0].count_ones() >= 14;
+        if is_opening {
+            moves.shuffle(&mut thread_rng());
+        }
+
         moves.sort_by(|a, b| {
             // First try the move from the transposition table
             if let Some(hash) = hash_move {
@@ -202,10 +232,25 @@ impl Search {
                 return b_promo.cmp(&a_promo);
             }
 
-            // Then try killer moves (TODO: implement killer move heuristic)
-            // Finally, try history heuristic (TODO: implement history heuristic)
+            // Then try killer moves
+            let depth = self.max_depth as usize;
+            if depth < 64 {
+                for killer in &self.killer_moves[depth] {
+                    if let Some(killer_move) = killer {
+                        if killer_move.from == a.from && killer_move.to == a.to {
+                            return std::cmp::Ordering::Less;
+                        }
+                        if killer_move.from == b.from && killer_move.to == b.to {
+                            return std::cmp::Ordering::Greater;
+                        }
+                    }
+                }
+            }
 
-            std::cmp::Ordering::Equal
+            // Finally, try history heuristic
+            let a_history = self.history_table[a.from as usize][a.to as usize];
+            let b_history = self.history_table[b.from as usize][b.to as usize];
+            b_history.cmp(&a_history)
         });
     }
 
@@ -254,11 +299,68 @@ impl Search {
         self.max_depth = depth;
     }
 
-    pub fn set_max_time(&mut self, seconds: u64) {
-        self.max_time = Duration::from_secs(seconds);
+    pub fn set_max_time(&mut self, milliseconds: u64) {
+        self.max_time = Duration::from_millis(milliseconds);
     }
 
     pub fn get_nodes_searched(&self) -> u64 {
         self.nodes_searched
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn test_time_control() {
+        let mut search = Search::new();
+        
+        // Test setting time control
+        search.set_max_time(1000); // 1 second
+        assert_eq!(search.max_time, Duration::from_millis(1000));
+        
+        search.set_max_time(5000); // 5 seconds
+        assert_eq!(search.max_time, Duration::from_millis(5000));
+    }
+
+    #[test]
+    fn test_search_respects_time_limit() {
+        let mut search = Search::new();
+        let board = Board::new();
+        
+        // Set a very short time limit (10ms)
+        search.set_max_time(10);
+        
+        // Start the search
+        let start_time = Instant::now();
+        let _best_move = search.find_best_move(&board);
+        let elapsed = start_time.elapsed();
+        
+        // Verify that the search didn't exceed the time limit (with some tolerance)
+        assert!(elapsed <= Duration::from_millis(20), 
+            "Search took {}ms, which exceeds the 10ms limit", 
+            elapsed.as_millis());
+    }
+
+    #[test]
+    fn test_search_uses_entire_time() {
+        let mut search = Search::new();
+        let board = Board::new();
+        
+        // Set a reasonable time limit (100ms)
+        search.set_max_time(100);
+        
+        // Start the search
+        let start_time = Instant::now();
+        let _best_move = search.find_best_move(&board);
+        let elapsed = start_time.elapsed();
+        
+        // Verify that the search used a significant portion of the time
+        // (at least 25% of the allocated time)
+        assert!(elapsed >= Duration::from_millis(25),
+            "Search only used {}ms of the allocated 100ms",
+            elapsed.as_millis());
     }
 } 

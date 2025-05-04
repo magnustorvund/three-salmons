@@ -135,11 +135,11 @@ impl Evaluator {
             ],
 
             // Mobility weights
-            pawn_mobility_weight: 1,
-            knight_mobility_weight: 2,
-            bishop_mobility_weight: 3,
-            rook_mobility_weight: 2,
-            queen_mobility_weight: 1,
+            pawn_mobility_weight: 5,
+            knight_mobility_weight: 10,
+            bishop_mobility_weight: 10,
+            rook_mobility_weight: 5,
+            queen_mobility_weight: 3,
             king_mobility_weight: 1,
 
             // Pawn structure weights

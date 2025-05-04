@@ -402,70 +402,73 @@ impl MoveGenerator {
                 let rank_diff = (to_rank - from_rank).abs();
                 let file_diff = (to_file - from_file).abs();
                 if rank_diff != file_diff {
-                    return false;
-                }
-                // Check if the path is clear
-                let rank_step = if to_rank > from_rank { 1 } else { -1 };
-                let file_step = if to_file > from_file { 1 } else { -1 };
-                let mut rank = from_rank + rank_step;
-                let mut file = from_file + file_step;
-                while rank != to_rank || file != to_file {
-                    let square = (rank * 8 + file) as u8;
-                    let square_mask = 1u64 << square;
-                    if board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
-                        .any(|&p| (p & square_mask) != 0) {
-                        return false;
+                    false
+                } else {
+                    // Check if the path is clear
+                    let rank_step = if to_rank > from_rank { 1 } else { -1 };
+                    let file_step = if to_file > from_file { 1 } else { -1 };
+                    let mut rank = from_rank + rank_step;
+                    let mut file = from_file + file_step;
+                    while rank != to_rank && file != to_file {
+                        let square = (rank * 8 + file) as u8;
+                        let square_mask = 1u64 << square;
+                        if board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
+                            .any(|&p| (p & square_mask) != 0) {
+                            return false;
+                        }
+                        rank += rank_step;
+                        file += file_step;
                     }
-                    rank += rank_step;
-                    file += file_step;
+                    true
                 }
-                true
             }
             Piece::Rook => {
                 let rank_diff = (to_rank - from_rank).abs();
                 let file_diff = (to_file - from_file).abs();
                 if rank_diff != 0 && file_diff != 0 {
-                    return false;
-                }
-                // Check if the path is clear
-                let rank_step = if to_rank > from_rank { 1 } else if to_rank < from_rank { -1 } else { 0 };
-                let file_step = if to_file > from_file { 1 } else if to_file < from_file { -1 } else { 0 };
-                let mut rank = from_rank + rank_step;
-                let mut file = from_file + file_step;
-                while rank != to_rank || file != to_file {
-                    let square = (rank * 8 + file) as u8;
-                    let square_mask = 1u64 << square;
-                    if board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
-                        .any(|&p| (p & square_mask) != 0) {
-                        return false;
+                    false
+                } else {
+                    // Check if the path is clear
+                    let rank_step = if to_rank > from_rank { 1 } else if to_rank < from_rank { -1 } else { 0 };
+                    let file_step = if to_file > from_file { 1 } else if to_file < from_file { -1 } else { 0 };
+                    let mut rank = from_rank + rank_step;
+                    let mut file = from_file + file_step;
+                    while rank != to_rank || file != to_file {
+                        let square = (rank * 8 + file) as u8;
+                        let square_mask = 1u64 << square;
+                        if board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
+                            .any(|&p| (p & square_mask) != 0) {
+                            return false;
+                        }
+                        rank += rank_step;
+                        file += file_step;
                     }
-                    rank += rank_step;
-                    file += file_step;
+                    true
                 }
-                true
             }
             Piece::Queen => {
                 let rank_diff = (to_rank - from_rank).abs();
                 let file_diff = (to_file - from_file).abs();
                 if rank_diff != 0 && file_diff != 0 && rank_diff != file_diff {
-                    return false;
-                }
-                // Check if the path is clear
-                let rank_step = if to_rank > from_rank { 1 } else if to_rank < from_rank { -1 } else { 0 };
-                let file_step = if to_file > from_file { 1 } else if to_file < from_file { -1 } else { 0 };
-                let mut rank = from_rank + rank_step;
-                let mut file = from_file + file_step;
-                while rank != to_rank || file != to_file {
-                    let square = (rank * 8 + file) as u8;
-                    let square_mask = 1u64 << square;
-                    if board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
-                        .any(|&p| (p & square_mask) != 0) {
-                        return false;
+                    false
+                } else {
+                    // Check if the path is clear
+                    let rank_step = if to_rank > from_rank { 1 } else if to_rank < from_rank { -1 } else { 0 };
+                    let file_step = if to_file > from_file { 1 } else if to_file < from_file { -1 } else { 0 };
+                    let mut rank = from_rank + rank_step;
+                    let mut file = from_file + file_step;
+                    while rank != to_rank || file != to_file {
+                        let square = (rank * 8 + file) as u8;
+                        let square_mask = 1u64 << square;
+                        if board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
+                            .any(|&p| (p & square_mask) != 0) {
+                            return false;
+                        }
+                        rank += rank_step;
+                        file += file_step;
                     }
-                    rank += rank_step;
-                    file += file_step;
+                    true
                 }
-                true
             }
             Piece::King => {
                 let rank_diff = (to_rank - from_rank).abs();
@@ -478,35 +481,35 @@ impl MoveGenerator {
                         if mv.to > mv.from { 0b0100 } else { 0b1000 }  // Black kingside or queenside
                     };
                     if board.castling_rights & castling_mask == 0 {
-                        return false;
-                    }
-
-                    // Check if the path is clear
-                    let rank = if board.side_to_move == Color::White { 0 } else { 7 };
-                    let (start_file, end_file) = if mv.to > mv.from {
-                        (4, 7)  // Kingside
+                        false
                     } else {
-                        (0, 4)  // Queenside
-                    };
-                    for file in start_file..=end_file {
-                        let square = rank * 8 + file;
-                        let square_mask = 1u64 << square;
-                        if file != start_file && file != end_file &&  // Skip king and rook squares
-                            board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
-                            .any(|&p| (p & square_mask) != 0) {
-                            return false;
+                        // Check if the path is clear
+                        let rank = if board.side_to_move == Color::White { 0 } else { 7 };
+                        let (start_file, end_file) = if mv.to > mv.from {
+                            (4, 7)  // Kingside
+                        } else {
+                            (0, 4)  // Queenside
+                        };
+                        for file in start_file..=end_file {
+                            let square = rank * 8 + file;
+                            let square_mask = 1u64 << square;
+                            if file != start_file && file != end_file &&  // Skip king and rook squares
+                                board.white_pieces[0..6].iter().chain(board.black_pieces[0..6].iter())
+                                .any(|&p| (p & square_mask) != 0) {
+                                return false;
+                            }
                         }
-                    }
 
-                    // Check if any of the squares the king moves through are under attack
-                    let attacker_color = board.side_to_move.opposite();
-                    for file in if mv.to > mv.from { 4..=6 } else { 2..=4 } {
-                        let square = rank * 8 + file;
-                        if self.is_square_under_attack(board, square as u8, attacker_color) {
-                            return false;
+                        // Check if any of the squares the king moves through are under attack
+                        let attacker_color = board.side_to_move.opposite();
+                        for file in if mv.to > mv.from { 4..=6 } else { 2..=4 } {
+                            let square = rank * 8 + file;
+                            if self.is_square_under_attack(board, square as u8, attacker_color) {
+                                return false;
+                            }
                         }
+                        true
                     }
-                    true
                 } else {
                     rank_diff <= 1 && file_diff <= 1
                 }
@@ -517,11 +520,10 @@ impl MoveGenerator {
             return false;
         }
 
-        // Check if the move leaves the king in check
+        // Make the move and check if the king is in check
         let mut board_copy = board.clone();
-        let original_side = board.side_to_move;
         board_copy.make_move(*mv);
-        !self.is_king_in_check(&board_copy, original_side)
+        !self.is_king_in_check(&board_copy, board.side_to_move)
     }
 
     pub fn generate_moves(&self, board: &Board) -> Vec<Move> {
@@ -543,9 +545,9 @@ impl MoveGenerator {
             if (pawns >> from) & 1 != 0 {
                 // Single push
                 let to = if board.side_to_move == Color::White {
-                    (from as i8).checked_add(8).filter(|&x| x < 64)
+                    (from as i8).checked_add(8).filter(|&x| x < 64 && from / 8 < 7)
                 } else {
-                    (from as i8).checked_sub(8).filter(|&x| x >= 0)
+                    (from as i8).checked_sub(8).filter(|&x| x >= 0 && from / 8 > 0)
                 };
                 if let Some(to) = to {
                     let to_mask = 1u64 << to;
@@ -557,13 +559,19 @@ impl MoveGenerator {
                             (board.side_to_move == Color::Black && to < 8) {
                             for promotion in [Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight] {
                                 let mv = Move::new_promotion(from as u8, to as u8, promotion);
-                                if self.is_move_valid(board, &mv) {
+                                // Make the move and check if the king is in check
+                                let mut board_copy = board.clone();
+                                board_copy.make_move(mv);
+                                if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                     moves.push(mv);
                                 }
                             }
                         } else {
                             let mv = Move::new(from as u8, to as u8, Piece::Pawn);
-                            if self.is_move_valid(board, &mv) {
+                            // Make the move and check if the king is in check
+                            let mut board_copy = board.clone();
+                            board_copy.make_move(mv);
+                            if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                 moves.push(mv);
                             }
                         }
@@ -590,7 +598,10 @@ impl MoveGenerator {
                         .all(|&p| (p & intermediate_mask) == 0);
                     if is_empty {
                         let mv = Move::new(from as u8, to as u8, Piece::Pawn);
-                        if self.is_move_valid(board, &mv) {
+                        // Make the move and check if the king is in check
+                        let mut board_copy = board.clone();
+                        board_copy.make_move(mv);
+                        if !self.is_king_in_check(&board_copy, board.side_to_move) {
                             moves.push(mv);
                         }
                     }
@@ -622,7 +633,10 @@ impl MoveGenerator {
                                 (board.side_to_move == Color::Black && rank == 0) {
                                 for promotion in [Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight] {
                                     let mv = Move::new_promotion_capture(from as u8, to, captured_piece, promotion);
-                                    if self.is_move_valid(board, &mv) {
+                                    // Make the move and check if the king is in check
+                                    let mut board_copy = board.clone();
+                                    board_copy.make_move(mv);
+                                    if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                         moves.push(mv);
                                     }
                                 }
@@ -638,7 +652,10 @@ impl MoveGenerator {
                                     castling_rook_from: None,
                                     castling_rook_to: None,
                                 };
-                                if self.is_move_valid(board, &mv) {
+                                // Make the move and check if the king is in check
+                                let mut board_copy = board.clone();
+                                board_copy.make_move(mv);
+                                if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                     moves.push(mv);
                                 }
                             }
@@ -669,7 +686,10 @@ impl MoveGenerator {
                             if has_pawn_to_capture {
                                 let mut mv = Move::new_en_passant(from as u8, ep_square, Piece::Pawn);
                                 mv.captured_piece = Some(Piece::Pawn);
-                                if self.is_move_valid(board, &mv) {
+                                // Make the move and check if the king is in check
+                                let mut board_copy = board.clone();
+                                board_copy.make_move(mv);
+                                if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                     moves.push(mv);
                                 }
                             }
@@ -702,7 +722,10 @@ impl MoveGenerator {
                             if is_capture {
                                 mv.captured_piece = Some(self.get_piece_at(board, to));
                             }
-                            if self.is_move_valid(board, &mv) {
+                            // Make the move and check if the king is in check
+                            let mut board_copy = board.clone();
+                            board_copy.make_move(mv);
+                            if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                 moves.push(mv);
                             }
                         }
@@ -728,7 +751,10 @@ impl MoveGenerator {
                             if is_capture {
                                 mv.captured_piece = Some(self.get_piece_at(board, to));
                             }
-                            if self.is_move_valid(board, &mv) {
+                            // Make the move and check if the king is in check
+                            let mut board_copy = board.clone();
+                            board_copy.make_move(mv);
+                            if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                 moves.push(mv);
                             }
                         }
@@ -754,7 +780,10 @@ impl MoveGenerator {
                             if is_capture {
                                 mv.captured_piece = Some(self.get_piece_at(board, to));
                             }
-                            if self.is_move_valid(board, &mv) {
+                            // Make the move and check if the king is in check
+                            let mut board_copy = board.clone();
+                            board_copy.make_move(mv);
+                            if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                 moves.push(mv);
                             }
                         }
@@ -781,7 +810,10 @@ impl MoveGenerator {
                             if is_capture {
                                 mv.captured_piece = Some(self.get_piece_at(board, to));
                             }
-                            if self.is_move_valid(board, &mv) {
+                            // Make the move and check if the king is in check
+                            let mut board_copy = board.clone();
+                            board_copy.make_move(mv);
+                            if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                 moves.push(mv);
                             }
                         }
@@ -813,7 +845,10 @@ impl MoveGenerator {
                             if is_capture {
                                 mv.captured_piece = Some(self.get_piece_at(board, to));
                             }
-                            if self.is_move_valid(board, &mv) {
+                            // Make the move and check if the king is in check
+                            let mut board_copy = board.clone();
+                            board_copy.make_move(mv);
+                            if !self.is_king_in_check(&board_copy, board.side_to_move) {
                                 moves.push(mv);
                             }
                         }
@@ -832,7 +867,12 @@ impl MoveGenerator {
                         !self.is_square_under_attack(board, 5, Color::Black) && // f1 not attacked
                         !self.is_square_under_attack(board, 6, Color::Black) { // g1 not attacked
                         let mv = Move::new_castling(4, 6, 7, 5);
-                        moves.push(mv);
+                        // Make the move and check if the king is in check
+                        let mut board_copy = board.clone();
+                        board_copy.make_move(mv);
+                        if !self.is_king_in_check(&board_copy, board.side_to_move) {
+                            moves.push(mv);
+                        }
                     }
                     // Queenside castling
                     if (board.castling_rights & 0b0010) != 0 &&
@@ -842,7 +882,12 @@ impl MoveGenerator {
                         !self.is_square_under_attack(board, 3, Color::Black) && // d1 not attacked
                         !self.is_square_under_attack(board, 2, Color::Black) { // c1 not attacked
                         let mv = Move::new_castling(4, 2, 0, 3);
-                        moves.push(mv);
+                        // Make the move and check if the king is in check
+                        let mut board_copy = board.clone();
+                        board_copy.make_move(mv);
+                        if !self.is_king_in_check(&board_copy, board.side_to_move) {
+                            moves.push(mv);
+                        }
                     }
                 } else {
                     // Kingside castling
@@ -853,7 +898,12 @@ impl MoveGenerator {
                         !self.is_square_under_attack(board, 61, Color::White) && // f8 not attacked
                         !self.is_square_under_attack(board, 62, Color::White) { // g8 not attacked
                         let mv = Move::new_castling(60, 62, 63, 61);
-                        moves.push(mv);
+                        // Make the move and check if the king is in check
+                        let mut board_copy = board.clone();
+                        board_copy.make_move(mv);
+                        if !self.is_king_in_check(&board_copy, board.side_to_move) {
+                            moves.push(mv);
+                        }
                     }
                     // Queenside castling
                     if (board.castling_rights & 0b1000) != 0 &&
@@ -863,7 +913,12 @@ impl MoveGenerator {
                         !self.is_square_under_attack(board, 59, Color::White) && // d8 not attacked
                         !self.is_square_under_attack(board, 58, Color::White) { // c8 not attacked
                         let mv = Move::new_castling(60, 58, 56, 59);
-                        moves.push(mv);
+                        // Make the move and check if the king is in check
+                        let mut board_copy = board.clone();
+                        board_copy.make_move(mv);
+                        if !self.is_king_in_check(&board_copy, board.side_to_move) {
+                            moves.push(mv);
+                        }
                     }
                 }
             }
