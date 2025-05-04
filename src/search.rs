@@ -26,8 +26,8 @@ impl Search {
             evaluator: Evaluator::new(),
             move_generator: MoveGenerator::new(),
             transposition_table: TranspositionTable::new(1_000_000), // 1 million entries
-            max_depth: 8,
-            max_time: Duration::from_secs(10),
+            max_depth: 25,
+            max_time: Duration::from_secs(20),
             nodes_searched: 0,
             start_time: Instant::now(),
             killer_moves: [[None; 2]; 64],
